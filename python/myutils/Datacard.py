@@ -122,7 +122,7 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict'
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'useMinmaxCuts'
                 ]
         for sysOptionName in sysOptionNames:
             print("-->", sysOptionName)
@@ -258,7 +258,6 @@ class Datacard(object):
         self.systematicsDictionaryNominal = {
                 # 'cut': real cut for this systematic variation
                 'cut': self.treecut,
-                # 'cachecut': looser cut, which is the same for many of the systematics and therefore reduces number of unique cuts
                 'cachecut': self.treecut,
                 'var': self.treevar,
                 'name': self.name,
@@ -286,7 +285,8 @@ class Datacard(object):
                 systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
                 systematicsDictionary.update({
                         'cut': self.getSystematicsCut(syst, Q),
-                        'cachecut': self.getSystematicsCut('minmax', Q),
+                        # 'cachecut': looser cut, which is the same for many of the systematics and therefore reduces number of unique cuts
+                        'cachecut': self.getSystematicsCut('minmax', Q) if self.sysOptions['useMinmaxCuts'] else self.getSystematicsCut(syst, Q),
                         'var': self.getSystematicsVar(syst, Q),
                         'weight': self.getSystematicsWeight(syst, Q),
                         'sysType': 'shape',

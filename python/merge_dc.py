@@ -83,3 +83,5 @@ if __name__ == "__main__":
         isComplete = mergeDC.prepare()
         if isComplete:
             mergeDC.run()
+        else:
+            raise Exception("InputDcIncomplete")
