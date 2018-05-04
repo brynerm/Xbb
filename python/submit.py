@@ -51,7 +51,6 @@ parser.add_option("-S","--samples",dest="samples",default="", help="samples you 
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
-                      help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
@@ -254,7 +253,7 @@ repDict = {
     'logpath': logPath,
     'job': '',
     'task': opts.task,
-    'queue': opts.queue,
+    'queue': '', #opts.queue,
     'timestamp': timestamp,
     'additional': '',
     'job_id': 'noid',
