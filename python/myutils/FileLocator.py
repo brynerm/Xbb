@@ -39,7 +39,7 @@ class FileLocator(object):
                 self.xrootdRedirectors = [xrootdRedirector]
 
         # use python bindings for xrootd (can be disabled setting the 'usePythonXrootD' option to False
-        self.usePythonXrootD = eval(self.config.get('Configuration', 'usePythonXrootD')) if self.config and self.config.has_option('Configuration', 'usePythonXrootD') else False
+        self.usePythonXrootD = eval(self.config.get('Configuration', 'usePythonXrootD')) if self.config and self.config.has_option('Configuration', 'usePythonXrootD') else True
         self.client = None
         self.server = None
         if self.usePythonXrootD or usePythonXrootD:
@@ -52,7 +52,7 @@ class FileLocator(object):
                     print('DEBUG: client:', self.client)
             except:
                 if self.debug:
-                    print('DEBUG: xrootd could not be initialized, remote file access will not work.')
+                    print('DEBUG: xrootd could not be initialized, trying to use xrdfs as fallback. To use the faster Python bindings upgrade CMSSW to version 9.')
 
         # prefixes to distinguish remote file paths from local ones
         self.storagePathPrefix = '/store/'

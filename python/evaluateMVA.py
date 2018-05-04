@@ -116,7 +116,7 @@ if len(matchingSamples) != 1:
 sample = matchingSamples[0]
 
 for fileName in filelist:
-    localFileName = fileName.split('/')[-1] #TODO! # fileLocator.getFilenameAfterPrep(fileName)
+    localFileName = fileLocator.getFilenameAfterPrep(fileName)
     inputFileName = "{path}/{subfolder}/{filename}".format(path=INpath, subfolder=sample.identifier, filename=localFileName)
     outputFileName = "{path}/{subfolder}/{filename}".format(path=OUTpath, subfolder=sample.identifier, filename=localFileName)
     tmpFileName = "{path}/{subfolder}/{filename}".format(path=tmpDir, subfolder=sample.identifier, filename=localFileName)

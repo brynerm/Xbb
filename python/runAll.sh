@@ -23,6 +23,8 @@ export TERM=""
 #-------------------------------------------------
 # Parse Input Arguments
 
+# kept for backwards compatibility, please use named arguments for new code!!!
+
 sample=$1     # The sample to run on. It must match a sampleName in samples_nosplit.ini.
 tag=$2        # The analysis configuration tag, e.g. 13TeV.
 task=$3       # The task to perform.
@@ -185,23 +187,13 @@ echo "MVAList: ${MVAList}";
 # Run Task
 
 if [ $task = "prep" ]; then
-    runCommand="python ./prepare_environment_with_config.py --sampleIdentifier ${sampleIdentifier}"
-    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    runCommand="python ./prepare_environment_with_config.py"
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
-    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
     
 elif [ $task = "sysnew" ]; then
-    runCommand="python ./sys_new.py --sampleIdentifier ${sampleIdentifier}"
-    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    runCommand="python ./sys_new.py"
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
     if [ "$addCollections" ]; then runCommand="${runCommand} --addCollections ${addCollections}"; fi
-    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
 
 elif [ $task = "singleprep" ]; then
     echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
@@ -219,11 +211,7 @@ elif [ $task = "trainReg" ]; then
 
 elif [ $task = "sys" ]; then
     runCommand="python ./write_regression_systematics.py --samples ${sampleIdentifier}"
-    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
 
 elif [ $task = "vars" ]; then
     echo "python ./write_newVariables.py --samples $sample ${config_filenames[@]}"
@@ -242,20 +230,10 @@ elif [ $task = "reg" ]; then
     python ./only_regression.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "eval" ]; then
-    runCommand="python  ./evaluateMVA.py --discr $MVAList --sampleIdentifier ${sampleIdentifier}"
-    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
-    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
+    runCommand="python  ./evaluateMVA.py --discr $MVAList"
 
 elif [ $task = "eval_scikit" ]; then
-    runCommand="python  ./evaluateMVA_scikit.py --discr $MVAList --sampleIdentifier ${sampleIdentifier}"
-    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
-    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
+    runCommand="python  ./evaluateMVA_scikit.py --discr $MVAList"
 
 elif [ $task = "singleeval" ]; then
     echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
@@ -276,12 +254,7 @@ elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "cachetraining" ]; then
-    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber} ${config_filenames[@]}"
-    if [ "$force" = "1" ]; then
-        runCommand="${runCommand} --force"
-    fi
-    echo "$runCommand"
-    eval "$runCommand"
+    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
 
 elif [ $task = "runtraining" ]; then
     runCommand="python ./run_training.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
@@ -293,75 +266,29 @@ elif [ $task = "runtraining" ]; then
     eval "$runCommand"
 
 elif [ $task = "runtraining_scikit" ]; then
-    runCommand="python ./run_training_scikit.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
+    runCommand="python ./run_training_scikit.py --trainingRegions ${trainingRegions}"
 
 elif [ $task = "hadd" ]; then
-    runCommand="python ./hadd.py --sampleIdentifier ${sampleIdentifier} --chunkNumber ${chunkNumber}"
-    if [ "$fileList" ]; then
-        runCommand="${runCommand} --fileList ${fileList}"
-    fi
-    if [ "$force" = "1" ]; then
-        runCommand="${runCommand} --force"
-    fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
+    runCommand="python ./hadd.py --chunkNumber ${chunkNumber}"
 
 elif [ $task = "cacheplot" ]; then
-    runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
-    if [ "$fileList" ]; then
-        runCommand="${runCommand} --fileList ${fileList}"
-    fi
-    if [ "$force" = "1" ]; then
-        runCommand="${runCommand} --force"
-    fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
+    runCommand="python ./cache_plot.py --regions ${regions} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
 
 elif [ $task = "runplot" ]; then
     if [ -z "$vars" ]; then 
-        runCommand="python ./run_plot.py --regions ${regions} ${config_filenames[@]}";
+        runCommand="python ./run_plot.py --regions ${regions}";
     else
-        runCommand="python ./run_plot.py --regions ${regions} --vars ${vars} ${config_filenames[@]}";
+        runCommand="python ./run_plot.py --regions ${regions} --vars ${vars}";
     fi
-    echo "$runCommand"
-    eval "$runCommand"
 
 elif [ $task = "cachedc" ]; then
-    runCommand="python ./cache_dc.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
-    if [ "$fileList" ]; then
-        runCommand="${runCommand} --fileList ${fileList}"
-    fi
-    if [ "$force" = "1" ]; then
-        runCommand="${runCommand} --force"
-    fi
-    if [ "$verbose" = "1" ]; then
-        runCommand="${runCommand} --verbose"
-    fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
+    runCommand="python ./cache_dc.py --regions ${regions} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
 
 elif [ $task = "rundc" ]; then
     runCommand="python ./run_dc.py --regions ${regions}";
-    if [ "$sampleIdentifier" ]; then
-        runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"
-    fi
-    if [ "$force" = "1" ]; then
-        runCommand="${runCommand} --force"
-    fi
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
 
 elif [ $task = "mergedc" ]; then
     runCommand="python ./merge_dc.py --regions ${regions}";
-    runCommand="${runCommand} ${config_filenames[@]}"
-    echo "$runCommand"
-    eval "$runCommand"
 
 elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
@@ -394,10 +321,6 @@ elif [ $task = "splitcaching" ]; then
 elif [ $task = "mergecaching" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
     ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
-
-elif [ $task = "mergecaching2" ]; then
-    echo "python ./myutils/MultiCaching.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist (...)"
-    python ./myutils/MultiCaching.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
 
 elif [ $task = "mergecachingplot" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot"
@@ -456,21 +379,28 @@ elif [ $task = "plot_sys" ]; then
     echo "python ./plot_systematics.py ${config_filenames[@]}"
     python ./plot_systematics.py ${config_filenames[@]}
 
-#elif [ $task = "mva_opt" ]; then
-#    echo "BDT Hyperparameters: $bdt_params"
-#    echo "python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params  --local True"
-#    python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params --local True
-
-elif [ $task = "mva_opt_eval" ]; then
-    echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --weight $bdt_params"
-    python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --weight $bdt_params
-
-# WORK IN PROGRESS
-elif [ $task = "mva_opt_dc" ]; then
-    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params"
-    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params
-
 fi
+
+# add standard arguments, print command and run 
+if [ "$runCommand" ]; then
+    if [ "$fileList" ]; then
+        runCommand="${runCommand} --fileList ${fileList}"
+    fi
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
+    if [ "$sampleIdentifier" ]; then
+        runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"
+    fi
+    if [ "$verbose" = "1" ]; then
+        runCommand="${runCommand} --verbose"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+fi
+
+
 EXITCODE=$?
 echo "--------------------------------------------------------------------------------"
 echo "exit code: $EXITCODE"

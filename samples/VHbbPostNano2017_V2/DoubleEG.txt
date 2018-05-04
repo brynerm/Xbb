@@ -1,8 +1,3 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-81/180317_105801/0000/tree_21.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-82/180317_105830/0000/tree_1.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-82/180317_105830/0000/tree_10.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-82/180317_105830/0000/tree_12.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-82/180317_105830/0000/tree_4.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-Run2017B80/180318_204335/0000/tree_1.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-Run2017B80/180318_204335/0000/tree_10.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DoubleEG/arizzi-RunII2017ReReco17Nov17-Run2017B80/180318_204335/0000/tree_11.root

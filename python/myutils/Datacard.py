@@ -697,7 +697,7 @@ class Datacard(object):
                 print("INFO: don't use specialweight, weight:", systematics['weight'])
 
             # enable only used branches
-            usedBranchList.addCut(['evt','run','isData'])
+            usedBranchList.addCut(['evt','run','isData','event'])
             listOfBranchesToKeep = usedBranchList.getListOfBranches()
             sampleTree.enableBranches(listOfBranchesToKeep)
             print ("DEBUG: branches enabled!")

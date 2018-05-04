@@ -559,7 +559,10 @@ class SampleTree(object):
     
     # these branches are ALWAYS removed (e.g. because they will be recomputed), even when they are in the 'keep_branches' list
     def addBranchToBlacklist(self, branchName):
-        self.removeBranches.append(branchName)
+        if branchName != '*':
+            self.removeBranches.append(branchName)
+        else:
+            print("WARNING: can't add branch '*' to blacklist => igonre it!")
 
     # wrapper to enable/disable branches in the TChain
     def SetBranchStatus(self, branchName, branchStatus):
@@ -630,11 +633,14 @@ class SampleTree(object):
         if '*' not in listOfBranchesToKeep and len(listOfBranchesToKeep) > 0:
             self.enableBranches(listOfBranchesToKeep)
         else:
-            print("INFO: keep all branches")
+            if len(self.removeBranches) < 1:
+                print("INFO: keep all branches")
+            else:
+                print("INFO: keep all branches but the following:")
+                print("INFO:", ", ".join(self.removeBranches))
 
         # now disable all branches, which will be e.g. recomputed
         for branchName in self.removeBranches:
-            print ("INFO: but remove", branchName)
             self.SetBranchStatus(branchName, 0)
 
         # initialize the output trees, this has to be called after the calls to SetBranchStatus

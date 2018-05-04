@@ -145,6 +145,8 @@ parser.add_option("-p","--splitFilesChunkSize", dest="splitFilesChunkSize", defa
                       help="number of files per part")
 parser.add_option("-f","--force", action="store_true", dest="force", default=False,
                       help="force overwriting of already cached files")
+parser.add_option("-l","--fileList", dest="fileList", default="",
+                      help="file list")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
