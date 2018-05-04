@@ -289,20 +289,6 @@ list_submitted_singlejobs = {}
 submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
 submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
 submitScriptSpecialOptions = {
-<<<<<<< HEAD
-        'mergesyscachingdcsplit': ' -l h_vmem=6g ',
-        'sysnew': ' -l h_vmem=6g ',
-        'singleeval': ' -l h_vmem=6g ',
-        'runtraining': ' -l h_vmem=6g ',
-        'eval': ' -l h_vmem=4g ',
-        'cachedc': ' -l h_vmem=6g ',
-        'runtraining': ' -l h_vmem=6g ',
-        'cacheplot': ' -l h_vmem=6g ',
-        'cachetraining': ' -l h_vmem=6g ',
-        'hadd': ' -l h_vmem=6g ',
-        }
-condorBatchGroups = {}
-=======
     'mergesyscachingdcsplit': ' -l h_vmem=6g ',
     'singleeval': ' -l h_vmem=6g ',
     'runtraining': ' -l h_vmem=6g ',
@@ -317,7 +303,6 @@ condorBatchGroups = {}
 if pathconfig.has_section('SubmitOptions'):
     if pathconfig.has_option('SubmitOptions', 'submitScriptTemplate'):
         submitScriptTemplate = pathconfig.get('SubmitOptions', 'submitScriptTemplate')
->>>>>>> subm_conf
 
     if pathconfig.has_option('SubmitOptions', 'submitScriptOptionsTemplate'):
         submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
@@ -479,13 +464,9 @@ def submit(job, repDict):
                 if answer.lower() == 'a':
                     submitScriptRunAllLocally = True
                 print "run locally"
-<<<<<<< HEAD
                 command = 'sh {runscript} | tee {logfile}'.format(runscript=runScript,logfile=outOutputPath)
-=======
-                command = 'sh {runscript}'.format(runscript=runScript)
                 if answer.lower() == 'd':
                     command = "XBBDEBUG=1 " + command
->>>>>>> subm_conf
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
