@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import signal
 import ROOT
+import fnmatch
+import hashlib
 ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
@@ -22,33 +24,36 @@ except:
     print "unable to detect python version!"
 
 parser = OptionParser()
-parser.add_option("-T", "--tag", dest="tag", default="8TeV",
-                      help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
-parser.add_option("-J", "--task", dest="task", default="",
-                      help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
-parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
-parser.add_option("-F", "--folderTag", dest="ftag", default="",
-                      help="Creats a new folder structure for outputs or uses an existing one with the given name")
-parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
-                      help="Number of events per file when splitting or number of files when using single file workflow.")
-parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
-                      help="Activate verbose flag for debug printouts")
-parser.add_option("-L", "--local", dest="override_to_run_locally", action="store_true", default=False,
-                      help="Override run_locally option to run locally")
+parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
-parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
-parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
-                      help="Force overwriting of files if they already exist")
-parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
-                      help="don't submit jobs if output files already exist")
 parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true", default=False,
                       help="check if all cached trees exist before submitting the jobs")
 parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
                       help="submit in a single submit file per job instead of using batches")
+parser.add_option("-F", "--folderTag", dest="ftag", default="",
+                      help="Creats a new folder structure for outputs or uses an existing one with the given name")
+parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
+                      help="Force overwriting of files if they already exist")
+parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
+parser.add_option("-J", "--task", dest="task", default="",
+                      help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
+parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
+                      help="don't submit jobs if output files already exist")
+parser.add_option("-L", "--local", dest="override_to_run_locally", action="store_true", default=False,
+                      help="Override run_locally option to run locally")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
+parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
+                      help="Number of events per file when splitting or number of files when using single file workflow.")
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
-parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
+parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
+parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
+parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
+parser.add_option("-T", "--tag", dest="tag", default="8TeV",
+                      help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
+parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
+parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
+                      help="Activate verbose flag for debug printouts")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 parser.add_option("-m", "--scan", dest="mvaScan", default=None, help="Scan MVA Settings for runtraining with the given number as number of runs")
 
@@ -83,7 +88,7 @@ signal.signal(signal.SIGINT, signal_handler)
 en = opts.tag
 
 #create the list with the samples to run over
-samplesList = opts.samples.split(",")
+samplesList = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
 timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
 
 if debugPrintOUts:
@@ -268,6 +273,7 @@ submitScriptSpecialOptions = {
         'runtraining': ' -l h_vmem=6g ',
         'cacheplot': ' -l h_vmem=6g ',
         'cachetraining': ' -l h_vmem=6g ',
+        'hadd': ' -l h_vmem=6g ',
         }
 condorBatchGroups = {}
 
@@ -300,6 +306,24 @@ def waitFor(jobNameList):
                     break
         if matches > 0:
             time.sleep(30)
+
+# ------------------------------------------------------------------------------
+# filter sample list with simple wildcard (*) syntax, used for -S option 
+# ------------------------------------------------------------------------------
+def filterSampleList(sampleIdentifiers, samplesList):
+    if samplesList and len([x for x in samplesList if x]) > 0:
+        filteredList = []
+        for expr in samplesList:
+            if expr in sampleIdentifiers:
+                filteredList.append(expr)
+            elif '*' in expr:
+                for sampleIdentifier in sampleIdentifiers:
+                    if fnmatch.fnmatch(sampleIdentifier, expr):
+                        filteredList.append(sampleIdentifier)
+        filteredList = list(set(filteredList))
+        return filteredList
+    else:
+        return sampleIdentifiers
 
 # ------------------------------------------------------------------------------
 # STANDARD WORKFLOW SUBMISSION FUNCTION
@@ -384,7 +408,9 @@ def submit(job, repDict):
             qsubOptions += submitScriptSpecialOptions[opts.task]
 
         command = submitScriptTemplate.format(options=qsubOptions, logfile=outOutputPath, runscript=runScript)
-        dump_config(configs, "%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
+        dumpConfigFileName = "%(logpath)s/%(timestamp)s_%(task)s.config" %(repDict)
+        if not os.path.isfile(dumpConfigFileName):
+            dump_config(configs, dumpConfigFileName)
 
     # -----------------------------------------------------------------------------
     # RUN command
@@ -509,9 +535,7 @@ if opts.task == 'prep' or opts.task == 'checkprep':
     pathOUT = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories', 'samplefiles')
     info = ParseInfo(samplesinfo, pathOUT)
-    sampleIdentifiers = info.getSampleIdentifiers()
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
@@ -549,17 +573,18 @@ if opts.task == 'prep' or opts.task == 'checkprep':
                     },
                     'batch': 'prep_' + sampleIdentifier,
                     })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
                 jobName = 'prep_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
                 submit(jobName, jobDict)
             else:
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
-    print '\n================'
-    print 'SUMMARY: checkprep'
-    print '==================\n'
-
     # printing the content of missingFiles
     if opts.task == 'checkprep':
+        print '\n================'
+        print 'SUMMARY: checkprep'
+        print '==================\n'
         for sampleIdentifier in sampleIdentifiers:
             n_missing_files = missingFiles[sampleIdentifier][0]
             n_total_files = missingFiles[sampleIdentifier][1]
@@ -567,6 +592,85 @@ if opts.task == 'prep' or opts.task == 'checkprep':
                 print "\x1b[32m All files for \x1b[36m", sampleIdentifier, "\x1b[32m were already produced. Nothing to submit \x1b[0m.."
             else:
                 print "\x1b[31m WARNING:", n_missing_files,"/", n_total_files, "missing or broken root files for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+
+# -----------------------------------------------------------------------------
+# HADD: this can merge files partially to avoid too many small trees
+# -----------------------------------------------------------------------------
+if opts.task == 'hadd':
+    from hadd import PartialFileMerger
+
+    inputPath = config.get("Directories", "HADDin")
+    outputPath = config.get("Directories", "HADDout")
+
+    samplefiles = config.get('Directories', 'samplefiles')
+    info = ParseInfo(samplesinfo, inputPath)
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+
+    samplefilesMerged = samplefiles + '/merged/'
+    fileLocator.makedirs(samplefilesMerged)
+
+    # process all sample identifiers (correspond to folders with ROOT files)
+    for sampleIdentifier in sampleIdentifiers:
+
+        chunkSize = 10
+        if config.has_section('Hadd') and config.has_option('Hadd', sampleIdentifier):
+            chunkSize = int(config.get('Hadd', sampleIdentifier).strip())
+            print "INFO: chunkSize read from config => ", chunkSize
+
+        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        if opts.limit and len(sampleFileList) > int(opts.limit):
+            sampleFileList = sampleFileList[0:int(opts.limit)]
+        splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
+
+        mergedFileNames = []
+        for i, splitFilesChunk in enumerate(splitFilesChunks):
+
+            # only give good files to hadd
+            fileNames = []
+            for fileName in splitFilesChunk:
+                fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=config.get('Directories','HADDin'), sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
+                #if fileLocator.isValidRootFile(fileNameAfterPrep):
+                if fileLocator.exists(fileNameAfterPrep):
+                    fileNames.append(fileName)
+                    print ".",
+                else:
+                    print "x",
+            print "INFO: #files=", len(splitFilesChunk), ", good=", len(fileNames)
+
+            if len(fileNames) > 0:
+                # 'fake' filenames to write into text file for merged files
+                partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
+                mergedFileName = partialFileMerger.getMergedFakeFileName()
+                mergedFileNames.append(mergedFileName)
+
+                outputFileName = partialFileMerger.getOutputFileName()
+
+                if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
+                    jobDict = repDict.copy()
+                    jobDict.update({
+                        'queue': 'short.q',
+                        'arguments':{
+                            'sampleIdentifier': sampleIdentifier,
+                            'fileList': FileList.compress(fileNames),
+                            'chunkNumber': i,
+                        },
+                        'batch': opts.task + '_' + sampleIdentifier,
+                        })
+                    if opts.force:
+                        jobDict['arguments']['force'] = ''
+                    jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
+                    submit(jobName, jobDict)
+            else:
+                print "\x1b[31mERROR: no good files for this sample available:",sampleIdentifier,"!\x1b[0m"
+
+        # write text file for merged files
+        mergedFileListFileName = '{path}/{sample}.{ext}'.format(path=samplefilesMerged, sample=sampleIdentifier, ext='txt')
+        with open(mergedFileListFileName, 'w') as mergedFileListFile:
+            mergedFileListFile.write('\n'.join(mergedFileNames))
+
+        print "INFO: hadd {sample}: {a} => {b}".format(sample=sampleIdentifier, a=len(sampleFileList), b=len(splitFilesChunks))
+        print "INFO:  > {mergedFileListFileName}".format(mergedFileListFileName=mergedFileListFileName)
+
 
 # -----------------------------------------------------------------------------
 # SYSNEW: add additional branches and branches for sys variations
@@ -579,9 +683,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
     pathOUT = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
-    sampleIdentifiers = info.getSampleIdentifiers() 
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
@@ -614,11 +716,16 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
 
             if opts.skipExisting:
+                # skip, if all output files exist
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
+                # skip, if all input files do not exist/are broken
+                #allInputFilesMissing = False
+                allInputFilesMissing = all([not fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
+                allInputFilesMissing = False
 
-            if not skipChunk or opts.force:
+            if (not skipChunk and not allInputFilesMissing) or opts.force:
                 jobDict = repDict.copy()
                 jobDict.update({
                     'arguments':{
@@ -633,14 +740,16 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                 jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
                 submit(jobName, jobDict)
             else:
-                print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
-
-    # printing the content of missingFiles
-    print '\n=================='
-    print 'SUMMARY: checksysnew'
-    print '====================\n'
+                if allInputFilesMissing:
+                    print "\x1b[31mSKIP: chunk %d, all input files of this chunk are missing!\x1b[0m"%chunkNumber
+                else:
+                    print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
     if opts.task == 'checksysnew':
+        # printing the content of missingFiles
+        print '\n=================='
+        print 'SUMMARY: checksysnew'
+        print '====================\n'
         for sampleIdentifier in sampleIdentifiers:
             #print 'sampleIdentifier is', sampleIdentifier
             n_missing_files = missingFiles[sampleIdentifier][0]
@@ -746,8 +855,7 @@ if opts.task.startswith('cacheplot'):
     samples = info.get_samples(sampleNames + dataSampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
@@ -803,18 +911,30 @@ if opts.task.startswith('cacheplot'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+    plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
+
+    if opts.parallel:
+        plotVarChunks = [plotVars[i:i + int(opts.parallel)] for i in xrange(0, len(plotVars), int(opts.parallel))]
+    else:
+        plotVarChunks = [plotVars]
 
     # submit all the plot regions as separate jobs
     for region in regions:
-        jobDict = repDict.copy()
-        jobDict.update({
-            'arguments':
-                {
-                    'regions': region,
-                }
-            })
-        jobName = 'plot_run_{region}'.format(region=region)
-        submit(jobName, jobDict)
+
+        # if --regions is given, only plot those regions 
+        regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        if regionMatched:
+            for j, plotVarList in enumerate(plotVarChunks):
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'arguments':
+                        {
+                            'regions': region,
+                            'vars': ','.join(plotVarList),
+                        }
+                    })
+                jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
@@ -837,8 +957,7 @@ if opts.task.startswith('cachedc'):
     samples = info.get_samples(sampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
@@ -880,7 +999,8 @@ if opts.task.startswith('cachedc'):
                 print 'INFO: files do not exist yet!'
 
         # number of files to process per job 
-        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
+        sampleSizesList = [sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier]
+        splitFilesChunkSize = min(sampleSizesList) if len(sampleSizesList) > 0 else 3
         splitFilesChunks = SampleTree({
                 'name': sampleIdentifier, 
                 'folder': sampleFolder
@@ -921,13 +1041,7 @@ if opts.task.startswith('rundc'):
     
     regions = Datacard.getRegions(config=config)
     samples = Datacard.getSamples(config=config, regions=regions)
-
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
-
-    # only process given samples (if option is present)
-    samplesToUse = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    if len(samplesToUse) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesToUse]
+    sampleIdentifiers = sorted(filterSampleList(list(set([sample.identifier for sample in samples])), samplesList))
 
     # check existence of cached files
     if opts.checkCached:
@@ -942,22 +1056,24 @@ if opts.task.startswith('rundc'):
 
     # submit all the DC regions as separate jobs
     for region in regions:
-        # submit separate jobs for either sampleIdentifiers
-        for sampleIdentifier in sampleIdentifiers:
-            jobDict = repDict.copy()
-            jobDict.update({
-                'queue': 'short.q',
-                'arguments':
-                    {
-                        'regions': region,
-                        'sampleIdentifier': sampleIdentifier,
-                    },
-                'batch': opts.task + '_' + sampleIdentifier,
-                })
-            if opts.force:
-                jobDict['arguments']['force'] = ''
-            jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
-            submit(jobName, jobDict)
+        regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        if regionMatched:
+            # submit separate jobs for either sampleIdentifiers
+            for sampleIdentifier in sampleIdentifiers:
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'queue': 'short.q',
+                    'arguments':
+                        {
+                            'regions': region,
+                            'sampleIdentifier': sampleIdentifier,
+                        },
+                    'batch': opts.task + '_' + sampleIdentifier,
+                    })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # MERGEDC: merge DC .root files for all samples per region and produce combined
@@ -994,9 +1110,7 @@ if opts.task == 'sys' or opts.task == 'syseval':
     path = config.get("Directories", "SYSin")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
-    sampleIdentifiers = info.getSampleIdentifiers() 
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
     # process all sample identifiers (correspond to folders with ROOT files)
@@ -1026,10 +1140,7 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
     pathOUT = config.get("Directories", "MVAout")
     info = ParseInfo(samplesinfo, path)
     samplefiles = config.get('Directories', 'samplefiles')
-    sampleIdentifiers = info.getSampleIdentifiers()
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
-
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
     # process all sample identifiers (correspond to folders with ROOT files)
@@ -1126,6 +1237,80 @@ if opts.task == 'summary':
         print config.get('Weights', 'weightF')
     except:
         print "\x1b[31mERROR: 'weightF' missing in section 'Weights'!\x1b[0m"
+
+# checks file status for several steps/folders at once
+if opts.task == 'status':
+    fileLocator = FileLocator(config=config)
+    path = config.get("Directories", "PREPout")
+    samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
+    info = ParseInfo(samplesinfo, path)
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList) 
+
+    foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
+    basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
+
+    maxPrintoutLen = 50
+
+    # process all sample identifiers (correspond to folders with ROOT files)
+    fileStatus = {}
+    for x in foldersToCheck:
+        fileStatus[x] = {}
+    for sampleIdentifier in sampleIdentifiers:
+        for x in foldersToCheck:
+            fileStatus[x][sampleIdentifier] = []
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            sampleFileList = []
+        for sampleFileName in sampleFileList:
+            localFileName = fileLocator.getFilenameAfterPrep(sampleFileName)
+            for folder in foldersToCheck:
+                localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
+                fileStatus[folder][sampleIdentifier].append(fileLocator.exists(localFilePath))
+    for folder in foldersToCheck:
+        folderStatus = fileStatus[folder]
+        print "---",folder,"---"
+        for sampleIdentifier, sampleStatus in folderStatus.iteritems():
+            sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
+            statusBar = ""
+            for x in sampleStatus:
+                statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
+            print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
+
+# outputs a simple python code to read the whole sample as chain
+if opts.task == 'sample':
+    fileLocator = FileLocator(config=config)
+    path = config.get("Directories", "PREPout")
+    samplefiles = config.get('Directories','samplefiles')
+    info = ParseInfo(samplesinfo, path)
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+    foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
+    print "folders:", foldersToCheck
+    basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
+
+    for folder in foldersToCheck:
+        path = basePaths[folder]
+        for sampleIdentifier in sampleIdentifiers:
+            splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=True, splitFilesChunkSize=-1, config=config).getSampleFileNameChunks()
+
+            print "----",sampleIdentifier,"----"
+            print "# BEGINNING OF PYTHON FILE"
+            print "import ROOT"
+            print "from myutils.sampleTree import SampleTree"
+            print "sampleFiles = ["
+            for sampleFileName in splitFilesChunks[0]:
+                print "    '{fileName}',".format(fileName=sampleFileName)
+            print "]"
+            print "sampleTree = SampleTree(sampleFiles, treeName='Events')" 
+            print "print 'number of events:', sampleTree.GetEntries()"
+            print "# example how to loop over all events"
+            print "# alternatively, the TChain object can be accessed as sampleTree.tree"
+            print "#for event in sampleTree:"
+            print "#if event.Vtype == 1:"
+            print "#    print 'Vtype 1 event', event.event"
+            print "# END OF PYTHON FILE"
+            print "-"*20
+
 
 # submit all jobs, which have been grouped in a batch
 if 'condor' in whereToLaunch:

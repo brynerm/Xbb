@@ -1,0 +1,12 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_18.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_19.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_20.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_21.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_22.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_23.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_5.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_7.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/DY2JetsToLL_M-50_LHEZpT_150-250_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-154/180318_225551/0000/tree_9.root

@@ -26,7 +26,7 @@ class FSR(object):
         # FSR jet candidates
         self.branchBuffers['nfsr_Jet'] = array.array('i', [0])
         self.branches.append({'name': 'nfsr_Jet', 'formula': self.getBranch, 'arguments': 'nfsr_Jet', 'type': 'i'})
-        self.fsrJetProperties = ['fsrJet_pt', 'fsrJet_eta', 'fsrJet_phi', 'fsrJet_mass']
+        self.fsrJetProperties = ['fsrJet_pt', 'fsrJet_eta', 'fsrJet_phi', 'fsrJet_mass', 'fsrJet_deltaR']
         for fsrJetProperty in self.fsrJetProperties:
             self.branchBuffers[fsrJetProperty] = array.array('f', [0.0, 0.0, 0.0, 0.0])
             self.branches.append({'name': fsrJetProperty, 'formula': self.getVectorBranch, 'arguments': {'branch': fsrJetProperty, 'length':4}, 'length': 4, 'leaflist': fsrJetProperty + '[nfsr_Jet]/F'})
@@ -39,6 +39,10 @@ class FSR(object):
         
         self.branchBuffers['nisr_Jet'] = array.array('i', [0])
         self.branches.append({'name': 'nisr_Jet', 'formula': self.getBranch, 'arguments': 'nisr_Jet', 'type': 'i'})
+        self.isrJetProperties = ['isrJet_pt', 'isrJet_eta', 'isrJet_phi', 'isrJet_mass', 'isrJet_deltaR']
+        for isrJetProperty in self.isrJetProperties:
+            self.branchBuffers[isrJetProperty] = array.array('f', [0.0, 0.0, 0.0, 0.0])
+            self.branches.append({'name': isrJetProperty, 'formula': self.getVectorBranch, 'arguments': {'branch': isrJetProperty, 'length':4}, 'length': 4, 'leaflist': isrJetProperty + '[nisr_Jet]/F'})
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -67,18 +71,20 @@ class FSR(object):
             higgsCandidateJets = []
             hJCMVAV2idx = [tree.hJCMVAV2idx[0], tree.hJCMVAV2idx[1]]
             for i in range(2):
-                higgsCandidateJets.append(Jet(pt = tree.Jet_pt_reg[hJCMVAV2idx[i]], eta=tree.Jet_eta[hJCMVAV2idx[i]], phi=tree.Jet_phi[hJCMVAV2idx[i]], mass=tree.Jet_mass[hJCMVAV2idx[i]]))
-            
-            # find FSR candidates and sort by pT
+                higgsCandidateJets.append(Jet(pt=tree.Jet_pt_reg[hJCMVAV2idx[i]], eta=tree.Jet_eta[hJCMVAV2idx[i]], phi=tree.Jet_phi[hJCMVAV2idx[i]], mass=tree.Jet_mass[hJCMVAV2idx[i]]))
+
+            # find FSR/ISR candidates and sort by pT
             fsrCandidateJets = []
             isrCandidateJets = []
             for i in range(tree.nJet):
                 additionalJet = Jet(pt=tree.Jet_pt[i], eta=tree.Jet_eta[i], phi=tree.Jet_phi[i], mass=tree.Jet_mass[i])
-                if tree.Jet_puId[i] == 7 and i not in hJCMVAV2idx and min(self.deltaR(additionalJet, higgsCandidateJets[0]), self.deltaR(additionalJet, higgsCandidateJets[1])) < 0.8:
-                    fsrCandidateJets.append(additionalJet)
-                elif tree.Jet_puId[i] == 7 and i not in hJCMVAV2idx and abs(tree.Jet_eta[i]) < 2.4:
-                    isrCandidateJets.append(additionalJet)
+                if tree.Jet_pt[i] > 30:
+                    if tree.Jet_puId[i] == 7 and i not in hJCMVAV2idx and min(self.deltaR(additionalJet, higgsCandidateJets[0]), self.deltaR(additionalJet, higgsCandidateJets[1])) < 0.8:
+                        fsrCandidateJets.append(additionalJet)
+                    elif tree.Jet_puId[i] == 7 and i not in hJCMVAV2idx and abs(tree.Jet_eta[i]) < 2.4:
+                        isrCandidateJets.append(additionalJet)
             fsrCandidateJets.sort(key=lambda jet: jet.pt, reverse=True)
+            isrCandidateJets.sort(key=lambda jet: jet.pt, reverse=True)
 
             # save up to 4 candidate jets
             self.branchBuffers['nfsr_Jet'][0] = min(len(fsrCandidateJets), 3)
@@ -87,8 +93,15 @@ class FSR(object):
                 self.branchBuffers['fsrJet_eta'][i] = fsrCandidateJets[i].eta
                 self.branchBuffers['fsrJet_phi'][i] = fsrCandidateJets[i].phi
                 self.branchBuffers['fsrJet_mass'][i] = fsrCandidateJets[i].mass
+                self.branchBuffers['fsrJet_deltaR'][i] = min(self.deltaR(fsrCandidateJets[i], higgsCandidateJets[0]), self.deltaR(fsrCandidateJets[i], higgsCandidateJets[1]))
 
-            self.branchBuffers['nisr_Jet'][0] = len(isrCandidateJets)
+            self.branchBuffers['nisr_Jet'][0] = min(len(isrCandidateJets), 3)
+            for i in range(self.branchBuffers['nisr_Jet'][0]):
+                self.branchBuffers['isrJet_pt'][i] = isrCandidateJets[i].pt
+                self.branchBuffers['isrJet_eta'][i] = isrCandidateJets[i].eta
+                self.branchBuffers['isrJet_phi'][i] = isrCandidateJets[i].phi
+                self.branchBuffers['isrJet_mass'][i] = isrCandidateJets[i].mass
+                self.branchBuffers['isrJet_deltaR'][i] = min(self.deltaR(isrCandidateJets[i], higgsCandidateJets[0]), self.deltaR(isrCandidateJets[i], higgsCandidateJets[1]))
 
             # correct higgs by highest FSR jet
             higgs = ROOT.TLorentzVector()
@@ -118,4 +131,4 @@ class FSR(object):
             self.branchBuffers['HCMVAV2_reg_fsrCorr_mass'][0] = higgs.M()
 
         return True
-            
+

@@ -89,6 +89,13 @@ class Datacard(object):
         self.anType = config.get('dc:%s'%self.region, 'type')
         self.EvalCut = config.get('Cuts', 'EvalCut')
 
+        # blinding
+        self.configSection = 'dc:%s'%self.region
+        self.blindCut = None
+        if config.has_option(self.configSection, 'blindCuts'):
+            self.blindCut = eval(config.get(self.configSection, 'blindCuts'))
+        print("\x1b[41m\x1b[97mblind cut:", self.blindCut,"\x1b[0m")
+
         self.keep_branches = eval(config.get('Branches', 'keep_branches'))
 
         #Systematics:
@@ -115,9 +122,10 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins'
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict'
                 ]
         for sysOptionName in sysOptionNames:
+            print("-->", sysOptionName)
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
             if self.debug:
                 print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
@@ -223,8 +231,9 @@ class Datacard(object):
             self.sample_sys_list = None
         #Create dictonary to "turn of" all the sample systematic (for nominal)
         self.sample_sys_dic = {}
-        for sample_sys in self.sample_sys_list:
-            self.sample_sys_dic[sample_sys] = False
+        if self.sample_sys_list:
+            for sample_sys in self.sample_sys_list:
+                self.sample_sys_dic[sample_sys] = False
         if self.debug:
             print("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
 
@@ -247,7 +256,10 @@ class Datacard(object):
 
         # define the nominal
         self.systematicsDictionaryNominal = {
+                # 'cut': real cut for this systematic variation
                 'cut': self.treecut,
+                # 'cachecut': looser cut, which is the same for many of the systematics and therefore reduces number of unique cuts
+                'cachecut': self.treecut,
                 'var': self.treevar,
                 'name': self.name,
                 'systematicsName': 'nominal',
@@ -274,6 +286,7 @@ class Datacard(object):
                 systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
                 systematicsDictionary.update({
                         'cut': self.getSystematicsCut(syst, Q),
+                        'cachecut': self.getSystematicsCut('minmax', Q),
                         'var': self.getSystematicsVar(syst, Q),
                         'weight': self.getSystematicsWeight(syst, Q),
                         'sysType': 'shape',
@@ -287,10 +300,13 @@ class Datacard(object):
             print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
         
         # weight systematics
-        # TODO: why uppercase is used for weight systematics?
         for weightF_sys in self.sysOptions['weightF_sys']:
             for Q in self.UD:
-                weight = self.config.get('Weights', '%s_%s' %(weightF_sys, Q.upper())) # <- here TODO
+                # to keep compatiblity with legacy analysis where naming was uppercase for weight systematics
+                # look for *_Up first and then for *_UP if it does not exist
+                weightNames = ['%s_%s'%(weightF_sys, x) for x in [Q, Q.upper()]]
+                weight = next(iter([self.config.get('Weights', x) for x in weightNames if self.config.has_option('Weights', x)]))
+
                 systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
                 systematicsDictionary.update({
                         'sysType': 'weight',
@@ -301,29 +317,30 @@ class Datacard(object):
                 self.systematicsList.append(systematicsDictionary)
 
         # sample systematics
-        for sampleSystematicName, sampleSystematicSamples in self.sysOptions['sample_sys_info'].iteritems(): #loop over the systematics
-            for Q in self.UD:
-                systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
-                systematicsDictionary.update({
-                        'sysType': 'sample',
-                        'samples': sampleSystematicSamples, 
-                        'name': sampleSystematicName,
-                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][sampleSystematicName], Q=Q) 
-                    })
-                # loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
-                for sampleSystematicSample in sampleSystematicSamples:
-                    for sample_type in sampleSystematicSample:
-                        sampleSystematicVariationTypes = {
-                                0: False,          # nominal
-                                1: (Q == 'Down'),  # down variation
-                                2: (Q == 'Up'),    # up variation
-                            }
-                        # mark nominal/up/down variations in sample_sys_dic
-                        for index, value in sampleSystematicVariationTypes.iteritems():
-                            for sampleName in sample_type[index]:
-                                systematicsDictionary['sample_sys_dic'][sampleName] = value
+        if self.sysOptions['sample_sys_info']:
+            for sampleSystematicName, sampleSystematicSamples in self.sysOptions['sample_sys_info'].iteritems(): #loop over the systematics
+                for Q in self.UD:
+                    systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
+                    systematicsDictionary.update({
+                            'sysType': 'sample',
+                            'samples': sampleSystematicSamples, 
+                            'name': sampleSystematicName,
+                            'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][sampleSystematicName], Q=Q) 
+                        })
+                    # loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
+                    for sampleSystematicSample in sampleSystematicSamples:
+                        for sample_type in sampleSystematicSample:
+                            sampleSystematicVariationTypes = {
+                                    0: False,          # nominal
+                                    1: (Q == 'Down'),  # down variation
+                                    2: (Q == 'Up'),    # up variation
+                                }
+                            # mark nominal/up/down variations in sample_sys_dic
+                            for index, value in sampleSystematicVariationTypes.iteritems():
+                                for sampleName in sample_type[index]:
+                                    systematicsDictionary['sample_sys_dic'][sampleName] = value
 
-                self.systematicsList.append(systematicsDictionary)
+                    self.systematicsList.append(systematicsDictionary)
         if self.debug or self.verbose:
             print('INFO: datacard initialization complete!')
             print('INFO: {nSys} systematics for {nSamples} samples'.format(nSys=len(self.systematicsList), nSamples=sum([len(x) for k,x in self.samples.iteritems()])))
@@ -339,13 +356,10 @@ class Datacard(object):
         # make a histogramm with entries of ALL BKG samples
         for i, sample in enumerate(samples): 
             print("INFO: Add BKG sample ", i, " of ", len(samples))
-            # get cuts that were used in caching for this sample
-            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
-            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
             # get sample tree from cache
             tc = TreeCache.TreeCache(
                     sample=sample,
-                    cutList=sampleCuts,
+                    cutList=self.getCacheCut(sample),
                     inputFolder=self.path,
                     config=self.config,
                     debug=False
@@ -492,11 +506,35 @@ class Datacard(object):
     # return cut for systematics variation as string
     def getSystematicsCut(self, syst, Q):
         cut = self.treecut
-        new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]] 
-        for new_cut in new_cut_list:
-            if not new_cut == 'nominal':
-                old_str, new_str = new_cut.split('>')
-                cut = cut.replace(old_str, new_str.replace('SYS', syst).replace('UD', Q).replace('?', Q))
+        tempReplacements = {}
+        if self.sysOptions['sys_cut_dict']:
+            cut = cut.replace(' ', '')
+            for k,v in self.sysOptions['sys_cut_dict'].iteritems():
+                if syst == 'minmax':
+                    # only for the minmax the direction is given by the comparison (>/<)
+                    if k in cut:
+                        tempName = 'cut%d'%(1+len(tempReplacements.items()))
+                        tempReplacements[tempName] = v.format(syst=syst, Up='Up', Down='Down')
+                        cut = cut.replace(k, '{%s}'%tempName)
+                else:
+                    # for all other systematics, there is a separate cut for up and down variation
+                    if k in cut:
+                        tempName = 'cut%d'%(1+len(tempReplacements.items()))
+                        tempReplacements[tempName] = v.format(syst=syst, Up=Q, Down=Q)
+                        cut = cut.replace(k, '{%s}'%tempName)
+        # now do normal replacements
+        if syst != 'minmax':
+            new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]] 
+            for new_cut in new_cut_list:
+                if not new_cut == 'nominal':
+                    old_str, new_str = new_cut.split('>')
+                    new_str = new_str.format(syst=syst, UD=Q).replace('SYS', syst).replace('UD', Q).replace('?', Q)
+                    cut = cut.replace(old_str, new_str)
+
+        # replace temp cuts
+        if tempReplacements:
+            cut = cut.format(**tempReplacements)
+
         return cut
 
     # return full (flattened) list of sample objects
@@ -510,8 +548,8 @@ class Datacard(object):
         cacheStatus = {}
         for i, sample in enumerate(allSamples):
             # get cuts that were used in caching for this sample
-            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
-            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
+            sampleCuts = self.getCacheCut(sample) 
+
             # get sample tree from cache
             tc = TreeCache.TreeCache(
                     sample=sample,
@@ -522,6 +560,14 @@ class Datacard(object):
                 )
             cacheStatus[sample.name] = tc.isCached()
         return cacheStatus
+
+    # get a little looser cut, which is the same for all systematics
+    def getCacheCut(self, sample):
+        systematicsCuts = sorted(list(set([x['cachecut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))])))
+        # nominal cut is still the original one, to ensure all nominal events are kept if approximations are used for systematics
+        # therefore the list systematicsCuts also contains the nominal cut string
+        sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
+        return sampleCuts
 
     def run(self, useSampleIdentifiers=None):
         # compute variable bin sizes to have minimum number of significance in highest BDT bin
@@ -554,8 +600,7 @@ class Datacard(object):
 
             print("SAMPLE NUMBER ", i, " OF ", len(allSamples))
             # get cuts that were used in caching for this sample
-            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
-            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
+            sampleCuts = self.getCacheCut(sample)
 
             # get sample tree from cache
             tc = TreeCache.TreeCache(
@@ -567,10 +612,12 @@ class Datacard(object):
                 )
 
             if not tc.isCached():
-                print("\x1b[31m:ERROR not cached! run cachedc step again\x1b[0m")
+                print("\x1b[31mERROR not cached! run cachedc step again\x1b[0m")
+                print (json.dumps(sampleCuts, sort_keys=True, indent=4, default=str))
                 raise Exception("NotCached")
 
             sampleTree = tc.getTree()
+            print ("DEBUG: tree found!")
 
             self.histograms[sample.name] = {}
             systematicsList = self.getSystematicsList(isData=(sample.type == 'DATA'))
@@ -589,7 +636,15 @@ class Datacard(object):
 
             # add all the cuts/weights for the different systematics 
             for systematics in systematicsList:
-
+                
+                # 'decorrelate_sys_weight' in datacards.ini can be used to enable weight systematics for specific samples only
+                # and even don't compute the histograms in this case (because e.g. branches missing)
+                # (this is different from the 'affecting' option, which only modifies the textfile but always creates histograms)
+                systematics['enabled'] = True
+                if systematics['sysType'] == 'weight' and systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
+                    if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                        systematics['enabled'] = False
+                
                 # additional BLINDING cut
                 if self.sysOptions['addBlindingCut']:
                     systematics['cutWithBlinding'] = '({cut})&&({blindingCut})'.format(cut=systematics['cut'], blindingCut=self.sysOptions['addBlindingCut'])
@@ -609,19 +664,24 @@ class Datacard(object):
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
 
                 # add TTreeFormulas
-                sampleTree.addFormula(systematics['cutWithBlinding'], systematics['cutWithBlinding'])
-                if sample.type != 'DATA':
-                    sampleTree.addFormula(systematics['weight'], systematics['weight'])
-                sampleTree.addFormula(systematics['var'], systematics['var'])
+                systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
+                
+                if systematics['enabled']:
+                    sampleTree.addFormula(systematics['cutWithBlinding'])
+                    if sample.type != 'DATA':
+                        sampleTree.addFormula(systematics['weight'], systematics['weight'])
+                    sampleTree.addFormula(systematics['var'], systematics['var'])
 
             # sample scale factor, to match to cross section
             sampleScaleFactor = sampleTree.getScale(sample) if sample.type != 'DATA' else 1.0
+            print ("DEBUG: scale ", sampleScaleFactor)
 
             # get used branches, which are either used in cut, weight or the variable itself
             usedBranchList = BranchList()
             for systematics in systematicsList:
                 usedBranchList.addCut(systematics['cutWithBlinding'])
-                usedBranchList.addCut(systematics['weight'])
+                if sample.type != 'DATA':
+                    usedBranchList.addCut(systematics['weight'])
                 usedBranchList.addCut(systematics['var'])
                 if 'addCut' in systematics:
                     usedBranchList.addCut(systematics['addCut'])
@@ -640,21 +700,40 @@ class Datacard(object):
             usedBranchList.addCut(['evt','run','isData'])
             listOfBranchesToKeep = usedBranchList.getListOfBranches()
             sampleTree.enableBranches(listOfBranchesToKeep)
+            print ("DEBUG: branches enabled!")
 
             # loop over all events in this sample
+            weight = 1.0
+            specialweight = 1.0
+            sampleTree.Print()
+
+            # per region/var blinding cut
+            self.regionVarBlindCut = None
+            if self.blindCut and sample.type == 'DATA':
+                print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
+                if systematicsList[0]['var'] in self.blindCut:
+                    self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
+                    sampleTree.addFormula(self.regionVarBlindCut)
+                    print("self.regionVarBlindCut = ", self.regionVarBlindCut)
+
             for event in sampleTree:
 
-                # evaluate all systematics for this event
-                for systematics in systematicsList:
-                    cutPassed = sampleTree.evaluate(systematics['cutWithBlinding'])
-                    if cutPassed:
-                        if 'addCut' in systematics:
-                            cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
+                # check blinding cut
+                cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
+
+                if cutPassed:
+                    # evaluate all systematics for this event
+                    for systematics in systematicsList:
+                        cutPassed = sampleTree.evaluate(systematics['cutWithBlinding']) if systematics['enabled'] else False
                         if cutPassed:
-                            weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
-                            treeVar = sampleTree.evaluate(systematics['var'])
-                            specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
+                            if 'addCut' in systematics:
+                                cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
+                            if cutPassed:
+                                weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
+                                treeVar = sampleTree.evaluate(systematics['var'])
+                                specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
+                                self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
+                        #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
 
             # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
             for systematics in systematicsList:
@@ -674,6 +753,7 @@ class Datacard(object):
         self.histograms = {}
         allSamples = self.getAllSamples()
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
+        
         for sampleIdentifier in sampleIdentifiers:
 
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
@@ -695,8 +775,8 @@ class Datacard(object):
                     histogram = rootFile.Get(histogramPath)
                     if not histogram:
                         print ("IN:", rootFileName)
+                        print ("FILE:", rootFile)
                         print ("LOOKING FOR:", histogramPath)
-                        print ("?:", rootFile.Get(histogramPath))
                         raise Exception("HistogramMissing")
                     if subsample.name not in self.histograms:
                         self.histograms[subsample.name] = {}
@@ -767,6 +847,7 @@ class Datacard(object):
             # adjust name for DC convention
             for systematics in self.getSystematicsList(isData=(sampleGroup == 'DATA')):
                 # sum histograms of all samples in the datacard group
+                #print ("->",self.sysOptions['Dict'])
                 datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
                 datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
                 
@@ -795,9 +876,10 @@ class Datacard(object):
             systematicsListBeforeBBB = self.getSystematicsList(isData=(sampleGroup == 'DATA'))
             sampleGroupsMC = [x for x in sampleGroups if x != 'DATA']
             for sampleGroup in sampleGroupsMC:
-                print("Running Statistical uncertainty")
                 threshold =  0.5 #stat error / sqrt(value). It was 0.5
-                print("threshold", threshold)
+                if self.debug:
+                    print("Running Statistical uncertainty")
+                    print("threshold", threshold)
                 for systematics in systematicsListBeforeBBB:
                     if 'histograms' in systematics and sampleGroup in systematics['histograms'] and systematics['systematicsName'] == 'nominal':
                         dcProcess = self.sysOptions['Dict'][sampleGroup]
@@ -805,9 +887,10 @@ class Datacard(object):
                         for bin in range(1, self.binning['nBinsX'] + 1):
                             if dcProcess not in binsBelowThreshold.keys():
                                 binsBelowThreshold[dcProcess] = []
-                            print ("binsBelowThreshold", binsBelowThreshold)
-                            print ("hist.GetBinContent(bin)", hist.GetBinContent(bin))
-                            print ("hist.GetBinError(bin)", hist.GetBinError(bin))
+                            if self.debug:
+                                print ("binsBelowThreshold", binsBelowThreshold)
+                                print ("hist.GetBinContent(bin)", hist.GetBinContent(bin))
+                                print ("hist.GetBinError(bin)", hist.GetBinError(bin))
                             belowThreshold = False
                             if hist.GetBinContent(bin) > 0.:
                                 if hist.GetBinError(bin)/sqrt(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) >= 1.:

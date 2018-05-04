@@ -80,7 +80,6 @@ print 'collections to add:', collections
 
 for fileName in filelist:
     localFileName = fileLocator.getFilenameAfterPrep(fileName)
-    
     inputFileName = "{path}/{subfolder}/{filename}".format(path=pathIN, subfolder=sample.identifier, filename=localFileName)
     outputFileName = "{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sample.identifier, filename=localFileName)
     tmpFileName = "{path}/{subfolder}/{filename}".format(path=tmpDir, subfolder=sample.identifier, filename=localFileName)
@@ -93,8 +92,14 @@ for fileName in filelist:
         # load sample tree and initialize vtype corrector
         sampleTree = SampleTree([inputFileName], config=config)
         if not sampleTree.tree:
-            print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m"
-            continue
+            # try original naming scheme if reading directly from Heppy/Nano ntuples (without prep)
+            fileNameOriginal = pathIN + '/' + fileName
+            print "FO:", fileNameOriginal
+            xrootdRedirector = fileLocator.getRedirector(fileNameOriginal)
+            sampleTree = SampleTree([fileNameOriginal], config=config, xrootdRedirector=xrootdRedirector)
+            if not sampleTree.tree:
+                print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m"
+                continue
 
         # lists of single modules can be given instead of a module, "--addCollections Sys.all"
         # [Sys]

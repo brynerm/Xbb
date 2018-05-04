@@ -13,7 +13,7 @@ class Jet :
 
 class BTagWeights(object):
 
-    def __init__(self, nano=False):
+    def __init__(self, fileCSV=None, fileCMVA=None, nano=False):
         self.nano = nano
         self.lastEntry = -1
         self.branchBuffers = {}
@@ -26,8 +26,8 @@ class BTagWeights(object):
             print "\x1b[31m:ERROR: BTagCalibrationStandalone not found! Go to Xbb directory and run 'make'!\x1b[0m"
             raise Exception("BTagCalibrationStandaloneNotFound")
         print 'load bTag CSV files...'
-        self.calib_csv = ROOT.BTagCalibration("csvv2", "csv/CSVv2_Moriond17_B_H.csv")
-        self.calib_cmva = ROOT.BTagCalibration("cmvav2", "csv/cMVAv2_Moriond17_B_H.csv")
+        self.calib_csv = ROOT.BTagCalibration("csvv2", fileCSV if fileCSV else  "csv/CSVv2_Moriond17_B_H.csv")
+        self.calib_cmva = ROOT.BTagCalibration("cmvav2", fileCMVA if fileCMVA else "csv/cMVAv2_Moriond17_B_H.csv")
         # map between algo/flavour and measurement type
         self.sf_type_map = {
             "CSV" : {
@@ -100,12 +100,6 @@ class BTagWeights(object):
         self.processEvent(event)
         if arguments:
             return self.branchBuffers[arguments][0]
-
-    # read from buffers which have been filled in processEvent()    
-    def getVectorBranch(self, event, arguments=None, destinationArray=None):
-        self.processEvent(event)
-        for i in range(arguments['length']):
-            destinationArray[i] =  self.branchBuffers[arguments['branch']][i]
 
     # depending on flavour, only a sample of systematics matter
     def applies(self, flavour, syst):

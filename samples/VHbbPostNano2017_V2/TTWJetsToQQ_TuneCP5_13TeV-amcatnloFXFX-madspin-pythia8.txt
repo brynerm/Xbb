@@ -1,0 +1,1 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTWJetsToQQ_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAOD-94X-133/180318_224557/0000/tree_1.root

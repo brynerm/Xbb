@@ -55,9 +55,9 @@ class ParseInfo:
         config.read(samples_config)
 
         # TODO: 08.03.2018: newprefix and weightexpression needed?
-        newprefix=config.get('General','newprefix')
+        newprefix = config.get('General','newprefix') if config.has_option('General','newprefix') else ''
         lumi=float(config.get('General','lumi'))
-        weightexpression=config.get('General','weightexpression')
+        weightexpression=config.get('General','weightexpression') if config.has_option('General','weightexpression') else ''
 
         self._samplelist = []
         self.__fileslist=[]

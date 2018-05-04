@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V2/ST_t-channel_top_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond311/180322_185733/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V2/ST_t-channel_top_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond311/180322_185733/0000/tree_2.root

@@ -166,7 +166,7 @@ if [ ! -d $logpath ]; then
 fi
 
 # The MVA list, only compute for the eval steps!
-#if [[ $string = *"eval"* ]]; then
+if [[ $task = *"eval"* ]]; then
 MVAList=$(
 python << END
 import myutils
@@ -188,6 +188,7 @@ if [ $task = "prep" ]; then
     runCommand="python ./prepare_environment_with_config.py --sampleIdentifier ${sampleIdentifier}"
     if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
@@ -293,6 +294,18 @@ elif [ $task = "runtraining" ]; then
 
 elif [ $task = "runtraining_scikit" ]; then
     runCommand="python ./run_training_scikit.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "hadd" ]; then
+    runCommand="python ./hadd.py --sampleIdentifier ${sampleIdentifier} --chunkNumber ${chunkNumber}"
+    if [ "$fileList" ]; then
+        runCommand="${runCommand} --fileList ${fileList}"
+    fi
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
 

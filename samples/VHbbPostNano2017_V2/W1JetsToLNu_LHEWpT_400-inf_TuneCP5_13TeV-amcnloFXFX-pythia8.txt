@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/W1JetsToLNu_LHEWpT_400-inf_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-219/180318_234707/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/W1JetsToLNu_LHEWpT_400-inf_TuneCP5_13TeV-amcnloFXFX-pythia8/arizzi-RunIIFall17MiniAOD-94X-219/180318_234707/0000/tree_3.root

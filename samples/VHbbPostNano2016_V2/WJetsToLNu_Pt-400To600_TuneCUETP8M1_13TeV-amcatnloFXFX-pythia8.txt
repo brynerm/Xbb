@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V2/WJetsToLNu_Pt-400To600_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/RunIISummer16NanoAOD-PUMoriond192_1File/180326_110551/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V2/WJetsToLNu_Pt-400To600_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/RunIISummer16NanoAOD-PUMoriond193_1File/180326_110622/0000/tree_1.root

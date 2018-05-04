@@ -64,8 +64,27 @@ class NewHistoMaker:
                 weightF = "(({weight})*({specialweight}))".format(weight=weightF, specialweight=specialweight)
                 print ("INFO: use specialweight: {specialweight}".format(specialweight=specialweight))
 
+            # (deprecated) additional blinding cut applied to DATA only in BDT plots
+            if 'BDT' in self.histogramOptions['treeVar'] and self.sample.type == 'DATA':
+                if self.config.has_section('Blinding') and self.config.has_option('Blinding', 'BlindBDTinSR'):
+                    self.blindingCut = self.config.get('Blinding', 'BlindBDTinSR')
+                    cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.blindingCut)
+                    print ("\x1b[31mUSE BLINDING CUT FOR DATA in BDT!!", self.blindingCut ,"\x1b[0m")
+
+            # (deprecated) additional mass blinding
+            if 'mass' in self.histogramOptions['treeVar'] and self.sample.type == 'DATA':
+                if self.config.has_section('Blinding') and self.config.has_option('Blinding', 'BlindDataInMassPlots') and eval(self.config.get('Blinding', 'BlindDataInMassPlots')):
+                    self.blindingCut = '0'
+                    cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.blindingCut)
+                    print ("\x1b[31mUSE BLINDING CUT FOR DATA in BDT!!", self.blindingCut ,"\x1b[0m")
+
+            # region/var specific blinding cut
+            # TODO: switch to this type only
+            if 'blindCut' in self.histogramOptions and self.sample.type == 'DATA':
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
+                print("INFO: found region/var specific blinding cut in histogramOptions:\n--->{cut}".format(cut=self.histogramOptions['blindCut']))
+
             # add tree cut 
-            # TODO: add sample cut again, which should not matter but to be safe
             selection = "({weight})*({cut})".format(weight=weightF, cut=cut) 
             nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
             if nEvents < 0:

@@ -140,9 +140,12 @@ for fileName in filelist:
                     'length': len(systematics.split()),
                     'formula': theMVAs[i].evaluate,
                     'leaflist': ':'.join(systematics.split())+'/F',
+                    # force 'srray-style' filling = passing the pointer to the array to the function instead of using the return value, even when the branch is a scalar, e.g. when only nominal systematic is selected
+                    'arrayStyle': True,
                 })
 
         sampleTree.addOutputBranches(mvaBranches)
+        print("branches:", mvaBranches)
 
         # define output file
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')

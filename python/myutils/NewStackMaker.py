@@ -4,6 +4,8 @@ ROOT.gROOT.SetBatch(True)
 import TdrStyles
 import os
 import array
+import time
+import subprocess
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -14,7 +16,7 @@ from sampleTree import SampleTree as SampleTree
 # stacked histogram
 # ------------------------------------------------------------------------------
 class NewStackMaker:
-    def __init__(self, config, var, region, SignalRegion, setup=None, subcut=''):
+    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title=None):
         self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.var = var
@@ -39,6 +41,11 @@ class NewStackMaker:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
             self.setup = setup
+        if not title:
+            if self.config.has_option('Plot_general', 'title'):
+                title = eval(self.config.get('Plot_general', 'title'))
+
+        self.plotTitle = title if title else "CMS"
 
         # TODO: make simpler
         self.rebin = 1
@@ -48,7 +55,12 @@ class NewStackMaker:
                 }
 
         # general event by event weight which is applied to all samples
-        if self.config.has_option('Weights','weightF'):
+        #  for special plots of weights itself, weightF can be defined in the plot definition
+        if self.config.has_option('plotDef:%s'%self.var,'weightF'):
+            self.histogramOptions['weight'] = self.config.get('plotDef:%s'%self.var,'weightF')
+        elif self.config.has_option('plotDef:%s'%self.var,'weight'):
+            self.histogramOptions['weight'] = self.config.get('plotDef:%s'%self.var,'weight')
+        elif self.config.has_option('Weights','weightF'):
             self.histogramOptions['weight'] = self.config.get('Weights','weightF')
         else:
             self.histogramOptions['weight'] = None
@@ -86,6 +98,13 @@ class NewStackMaker:
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
+        
+        # region/variable specific blinding cut 
+        if self.config.has_option(self.configSection, 'blindCuts'):
+            blindCuts = eval(self.config.get(self.configSection, 'blindCuts'))
+            if self.var in blindCuts:
+                self.histogramOptions['blindCut'] = blindCuts[self.var]
+                print("\x1b[31mINFO: for region {region} var {var} using the blinding cut: {cut}\x1b[0m".format(region=self.region, var=self.var, cut=self.histogramOptions['blindCut'])) 
 
         self.groups = {}
         self.histograms = []
@@ -94,7 +113,7 @@ class NewStackMaker:
         self.collectedObjects = []
         self.dataTitle = 'Data'
         self.maxRatioUncert = 0.5
-        self.lumi = self.config.get('Plot_general','lumi')
+        self.lumi = self.config.get('General','lumi')
         self.ratioError = None
         self.ratioPlot = None
         if SignalRegion:
@@ -112,11 +131,12 @@ class NewStackMaker:
     # draw text
     # ------------------------------------------------------------------------------
     @staticmethod
-    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8):
+    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8, color=None):
         ROOT.gPad.Update()
         text = ROOT.TLatex()
         text.SetNDC()
-        text.SetTextColor(ROOT.kBlack)
+        if color:
+            text.SetTextColor(color)
         text.SetTextSize(text.GetTextSize()*size)
         text.DrawLatex(ndcX,ndcY,txt)
         return text
@@ -128,6 +148,7 @@ class NewStackMaker:
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
+
         histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
         sampleHistogram = histoMaker.getHistogram()
         self.histograms.append({
@@ -208,16 +229,11 @@ class NewStackMaker:
         self.legends['ratio'].SetNColumns(2)
 
         # draw ratio plot
-        chiScore = -1.0
-        try:
-            self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['minX'], self.histogramOptions['maxX'], "", self.maxRatioUncert, True)
-            ksScore = dataHistogram.KolmogorovTest(mcHistogram)
-            chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
-            print ("INFO: data/MC ratio, KS test:", ksScore, " chi2:", chiScore)
-        except Exception as e:
-            print("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
-            print("(this is OK if no MC is plotted!)")
+        self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['minX'], self.histogramOptions['maxX'], "", self.maxRatioUncert, True)
 
+        ksScore = dataHistogram.KolmogorovTest(mcHistogram)
+        chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
+        print ("INFO: data/MC ratio, KS test:", ksScore, " chi2:", chiScore)
         try:
             self.ratioPlot.SetStats(0)
             self.ratioPlot.GetXaxis().SetTitle(self.xAxis)
@@ -228,6 +244,42 @@ class NewStackMaker:
             self.ratioError.Draw('SAME2')
         except Exception as e:
             print ("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
+
+        # blinded region
+        if 'blindCut' in self.histogramOptions:
+
+            # check if the blinding cut has the simple form var<num
+            isSimpleCut = False
+            print("DEBUG:", self.histogramOptions['blindCut'], self.histogramOptions['treeVar'], self.histogramOptions['blindCut'].startswith(self.histogramOptions['treeVar']))
+            if self.histogramOptions['blindCut'].startswith(self.histogramOptions['treeVar']):
+                cond = self.histogramOptions['blindCut'].split(self.histogramOptions['treeVar'])[1]
+                print("DEBUG: cond=", cond)
+                if cond.startswith('<'):
+                    num = cond.replace('<=','').replace('<','')
+                    print("DEBUG: num=",num)
+                    try:
+                        blindingCutThreshold = float(num)
+                        isSimpleCut = True
+                    except:
+                        pass
+
+            if isSimpleCut:
+                blindedRegion = ROOT.TH1D("blind","blind",self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
+                for i in range(self.ratioPlot.GetXaxis().GetNbins()):
+                    binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
+                    value = 1.1
+                    if binLowEdgeValue >= blindingCutThreshold:
+                        error = 0.6
+                    else:
+                        error = 0.0
+                    blindedRegion.SetBinContent(1+i, value)
+                    blindedRegion.SetBinError(1+i, error)
+                blindedRegion.SetFillColor(ROOT.kRed)
+                blindedRegion.SetFillStyle(3018)
+                blindedRegion.SetMarkerSize(0)
+                blindedRegion.Draw("SAME E2")
+                self.addObject(blindedRegion)
+                print("DEBUG:", blindedRegion, self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
 
         self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
         self.m_one_line.SetLineStyle(ROOT.kSolid)
@@ -296,7 +348,7 @@ class NewStackMaker:
     def drawPlotTexts(self):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
-        self.addObject(self.myText("CMS",0.17+(0.03 if self.is2D else 0),0.88,1.04))
+        self.addObject(self.myText(self.plotTitle,0.17+(0.03 if self.is2D else 0),0.88,1.04))
         print ('self.lumi is', self.lumi)
         try:
             self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17+(0.03 if self.is2D else 0), 0.83))
@@ -331,6 +383,14 @@ class NewStackMaker:
                 self.addObject(self.myText(label['text'], label['x'], label['y'], label['size']))
         except:
             pass
+
+        try:
+            if self.config.has_option('Plot_general', 'additionalText'):
+                additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
+                for j, additionalTextLine in enumerate(additionalTextLines):
+                    self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6))
+        except Exception as e:
+            print(e)
 
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
@@ -489,17 +549,15 @@ class NewStackMaker:
             else:
                 ROOT.gPad.SetLogy(0)
             allStack.SetMaximum(Ymax)
-        if allStack:
-            if allStack.GetXaxis():
-                if (not normalize and dataGroupName in groupedHistograms) and not self.is2D:
-                    allStack.GetXaxis().SetLabelOffset(999)
-                    allStack.GetXaxis().SetLabelSize(0)
-                else:
-                    allStack.GetXaxis().SetTitle(self.xAxis)
+        if (not normalize and dataGroupName in groupedHistograms) and not self.is2D:
+            allStack.GetXaxis().SetLabelOffset(999)
+            allStack.GetXaxis().SetLabelSize(0)
+        else:
+            allStack.GetXaxis().SetTitle(self.xAxis)
 
-            if self.is2D:
-                if 'minZ' in self.histogramOptions and 'maxZ' in self.histogramOptions:
-                    allStack.GetZaxis().SetRangeUser(self.histogramOptions['minZ'], self.histogramOptions['maxZ'])
+        if self.is2D:
+            if 'minZ' in self.histogramOptions and 'maxZ' in self.histogramOptions:
+                allStack.GetZaxis().SetRangeUser(self.histogramOptions['minZ'], self.histogramOptions['maxZ'])
 
         # draw DATA
         if dataGroupName in groupedHistograms and not self.is2D:
@@ -550,4 +608,14 @@ class NewStackMaker:
         keys = list(set(sorted([histogram['name'] for histogram in self.histograms])))
         for key in keys:
             print(key.ljust(50),("%d"%self.histoCounts['unweighted'][key]).ljust(10), ("%f"%self.histoCounts['weighted'][key]).ljust(10))
+
+        # save data histogram
+        if self.config.has_option('Plot_general','saveDataHistograms') and eval(self.config.get('Plot_general','saveDataHistograms')):
+            if dataGroupName in groupedHistograms:
+                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix='DATA_'+prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext="root")
+                dataOutputFile = ROOT.TFile.Open(outputFileName, "recreate")
+                groupedHistograms[dataGroupName].SetDirectory(dataOutputFile)
+                dataOutputFile.Write()
+                dataOutputFile.Close()
+
 

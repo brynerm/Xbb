@@ -127,7 +127,7 @@ class CachePlot(object):
 
                         # for the first sample which comes from this files, load the tree
                         if not self.sampleTree:
-                            self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config)
+                            self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config, saveMemory=True)
                             if not self.sampleTree or not self.sampleTree.tree:
                                 print ("\x1b[31mERROR: creation of sample tree failed!!\x1b[0m")
                                 raise Exception("CreationOfSampleTreeFailed")

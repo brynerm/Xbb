@@ -64,13 +64,14 @@ class CacheDatacards(object):
                     # systematics cuts are combined with logical OR, such that 1 cache file can be used for all the systematics
 
                     isData = (sample.type == 'DATA')
-                    systematicsCuts = [x['cut'] for x in dcMaker.getSystematicsList(isData=isData)]
+                    systematicsCuts = sorted(list(set([x['cachecut'] for x in dcMaker.getSystematicsList(isData=isData)])))
                     sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
-                    if self.verbose:
+                    if True or self.verbose:
                         print (json.dumps(sampleCuts, sort_keys=True, indent=8, default=str))
 
                     # make list of branches to keep in root file
                     branchList = BranchList(sample.subcut)
+                    branchList.addCut([x['cachecut'] for x in dcMaker.getSystematicsList()])
                     branchList.addCut([x['cut'] for x in dcMaker.getSystematicsList()])
                     branchList.addCut([x['var'] for x in dcMaker.getSystematicsList()])
                     branchList.addCut([x['weight'] for x in dcMaker.getSystematicsList()])

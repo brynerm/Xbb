@@ -1,0 +1,5 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ggZH_HToBB_ZToLL_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAOD-94X-243/180318_235823/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ggZH_HToBB_ZToLL_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAOD-94X-243/180318_235823/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ggZH_HToBB_ZToLL_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAOD-94X-243/180318_235823/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ggZH_HToBB_ZToLL_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAOD-94X-243/180318_235823/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ggZH_HToBB_ZToLL_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAOD-94X-243/180318_235823/0000/tree_5.root

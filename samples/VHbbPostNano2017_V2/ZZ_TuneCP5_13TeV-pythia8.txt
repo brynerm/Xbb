@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ZZ_TuneCP5_13TeV-pythia8/arizzi-RunIIFall17MiniAOD-94X-144/180318_225109/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ZZ_TuneCP5_13TeV-pythia8/arizzi-RunIIFall17MiniAOD-94X-144/180318_225109/0000/tree_2.root

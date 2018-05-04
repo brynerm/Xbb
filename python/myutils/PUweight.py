@@ -14,6 +14,7 @@ class PUweight(object):
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
+        self.sampleTree = initVars['sampleTree']
         if self.sample.isMC():
             self.systematics = {
                     'Nominal': self.fileNameData, 
@@ -25,10 +26,19 @@ class PUweight(object):
             rootFileData = {k: ROOT.TFile.Open(v, "read") if v else None for k,v in self.systematics.iteritems()}
             if not rootFileData['Nominal']:
                 raise Exception("RootFileMissing")
-
-            rootFileMC = ROOT.TFile.Open(self.fileNameMC, "read")
             histogramData = {k: v.Get('pileup') if v else None for k,v in rootFileData.iteritems()}
-            histogramMC = rootFileMC.Get('pileup')
+
+            # if no file for MC is given, try to load MC pileup from 'autoPU' histogram (2017)
+            if self.fileNameMC:
+                rootFileMC = ROOT.TFile.Open(self.fileNameMC, "read")
+                histogramMC = rootFileMC.Get('pileup')
+            else:
+                if 'autoPU' in self.sampleTree.histograms:
+                    histogramMC = self.sampleTree.histograms['autoPU']
+                    print "INFO: using autoPU histogram!"
+                else:
+                    print "\x1b[31mERROR: no MC PU file given and no autoPU histogram for MC found!\x1b[0m"
+                    raise Exception("NoPUforMC")
 
             # normalize histograms
             for k,v in histogramData.iteritems():
@@ -36,6 +46,7 @@ class PUweight(object):
                     v.Scale(1.0/v.Integral())
             histogramMC.Scale(1.0/histogramMC.Integral())
 
+            # check histogram compatibility
             for k,v in histogramData.iteritems():
                 if v:
                     if v.GetNbinsX()!=histogramMC.GetNbinsX() or v.GetXaxis().GetXmin()!=histogramMC.GetXaxis().GetXmin() or v.GetXaxis().GetXmax()!=histogramMC.GetXaxis().GetXmax():

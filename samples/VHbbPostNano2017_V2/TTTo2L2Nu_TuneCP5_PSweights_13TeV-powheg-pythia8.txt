@@ -1,0 +1,12 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_15.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_18.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_21.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_22.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_31.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_33.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_39.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_6.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_8.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/arizzi-RunIIFall17MiniAOD-94X-122/180318_224011/0000/tree_9.root

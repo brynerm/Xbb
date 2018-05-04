@@ -13,10 +13,11 @@ import os,sys
 
 class PlotHelper(object):
 
-    def __init__(self, config, region, vars = None):
+    def __init__(self, config, region, vars = None, title=None):
         self.config = config
         self.region = region
         self.vars = vars
+        self.title = title if title and len(title)>0 else None
 
         # VHbb namespace
         VHbbNameSpace=config.get('VHbbNameSpace','library')
@@ -51,7 +52,7 @@ class PlotHelper(object):
         # load samples
         self.data = eval(self.config.get(self.configSection, 'Datas')) # read the data corresponding to each CR (section)
         self.mc = eval(self.config.get('Plot_general', 'samples')) # read the list of mc samples
-        self.total_lumi = eval(self.config.get('Plot_general', 'lumi'))
+        self.total_lumi = eval(self.config.get('General', 'lumi'))
         self.signalRegion = False
         if self.config.has_option(self.configSection, 'Signal'):
             self.mc.append(self.config.get(self.configSection, 'Signal'))
@@ -71,7 +72,7 @@ class PlotHelper(object):
 
         self.histogramStacks = {}
         for var in self.vars:
-            self.histogramStacks[var] = StackMaker(self.config, var, self.region, self.signalRegion, None, '_'+self.subcutPlotName)
+            self.histogramStacks[var] = StackMaker(self.config, var, self.region, self.signalRegion, None, '_'+self.subcutPlotName, title=self.title)
         
         # add DATA + MC samples
         for sample in self.dataSamples + self.mcSamples:
@@ -134,6 +135,8 @@ if __name__ == "__main__":
                           help="cut region identifiers, separated by comma")
     parser.add_option("-p","--vars", dest="vars", default='',
                           help="plot variables, separated by comma")
+    parser.add_option("-t","--title", dest="title", default='',
+                          help="plot title")
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
             opts.config = ["config"]
@@ -151,7 +154,7 @@ if __name__ == "__main__":
     regions = opts.regions.split(',')
     vars = opts.vars.split(',')
     for region in regions:
-        plotter = PlotHelper(config=config, region=region, vars=vars)
+        plotter = PlotHelper(config=config, region=region, vars=vars, title=opts.title)
         plotter.prepare()
         plotter.run()
 

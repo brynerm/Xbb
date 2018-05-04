@@ -8,9 +8,10 @@ import math
 # jet regression and systematics
 class JetEnergySystematics(object):
 
-    def __init__(self, channel='', weights=None):
+    def __init__(self, channel='', weights=None, nano=False):
         self.channel = channel
         self.regWeightFileName = weights
+        self.nano = nano
 
     def customInit(self, initVars):
         self.config = initVars['config']

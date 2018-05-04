@@ -1,12 +1,17 @@
 *.root
 */*
 *.swo
+*.pyc
+*/*.pyc
 *.swp
-.*.swp
+*.*.swp
+*.*.bkp
 !Gael*/
 luca
 !json
 !*config/*
+*config/*.swp
+*config/volatile.ini
 */*.swo
 !csv/*
 csv/*.d
@@ -15,3 +20,4 @@ csv/*.so
 core.*
 condor_*.sub
 .DS_Store
+!myutils/*

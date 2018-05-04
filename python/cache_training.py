@@ -77,6 +77,7 @@ class CacheTraining(object):
                 for trainingRegion,trainingRegionInfo in self.trainingRegionsDict.iteritems():
                     for additionalCut in [self.TrainCut, self.EvalCut]:
                         branchListOfMVAVars.addCut(trainingRegionInfo['vars'])
+            branchListOfMVAVars.addCut(self.config.get('Weights', 'weightF'))
             mvaBranches = branchListOfMVAVars.getListOfBranches()
 
             # loop over all samples
@@ -116,7 +117,7 @@ class CacheTraining(object):
                                 tc.deleteCachedFiles(chunkNumber=self.chunkNumber)
                             # for the first sample which comes from this files, load the tree
                             if not self.sampleTree:
-                                self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config)
+                                self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config, saveMemory=True)
                             treeCaches.append(tc.setSampleTree(self.sampleTree).cache())
 
             if len(treeCaches) > 0:

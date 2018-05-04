@@ -1,0 +1,3 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ST_t-channel_antitop_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/arizzi-RunIIFall17MiniAOD-94X-112/180318_223332/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ST_t-channel_antitop_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/arizzi-RunIIFall17MiniAOD-94X-112/180318_223332/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V2/ST_t-channel_antitop_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/arizzi-RunIIFall17MiniAOD-94X-112/180318_223332/0000/tree_3.root

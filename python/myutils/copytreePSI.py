@@ -22,8 +22,12 @@ class CopyTreePSI(object):
             __tmpPath = os.environ["TMPDIR"]
         except:
             __tmpPath = self.config.get('Directories', 'scratch')
-
-        outputFileName = outputFile.split('/')[len(outputFile.split('/'))-1]
+        try:
+            if not os.path.isdir(__tmpPath):
+                os.makedirs(__tmpPath)
+        except:
+            pass
+        outputFileName = outputFile.split('/')[-1]
         print 'outputFileName',__tmpPath+'/'+outputFileName
         output = ROOT.TFile.Open(__tmpPath+'/'+outputFileName,'recreate')
 

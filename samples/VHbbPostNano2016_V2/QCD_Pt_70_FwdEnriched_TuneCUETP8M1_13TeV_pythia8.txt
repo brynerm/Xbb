@@ -1,0 +1,3 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V2/QCD_Pt_70_FwdEnriched_TuneCUETP8M1_13TeV_pythia8/RunIISummer16NanoAOD-PUMoriond293/180322_184751/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V2/QCD_Pt_70_FwdEnriched_TuneCUETP8M1_13TeV_pythia8/RunIISummer16NanoAOD-PUMoriond293/180322_184751/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V2/QCD_Pt_70_FwdEnriched_TuneCUETP8M1_13TeV_pythia8/RunIISummer16NanoAOD-PUMoriond293/180322_184751/0000/tree_3.root

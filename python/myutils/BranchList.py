@@ -38,7 +38,7 @@ class BranchList(object):
     # return list of branches (as string) used by any of the given cuts or weights. One still has to check if the branches
     #  really exist in the trees before calling SetBranchStatus(), otherwise it will print tons of warnings and will be slow.
     def getListOfBranches(self):
-        operators = ['[', ']', '*', '(', ')', '||','|', '<', '>', '=', '.', '&&', '&', '+', '-', ',', ' ', '!']
+        operators = ['[', ']', '*', '/', '(', ')', '||','|', '<', '>', '=', '.', '&&', '&', '+', '-', ',', ' ', '!']
         separator = '??'
         branches = []
         for cut in self.cuts:
