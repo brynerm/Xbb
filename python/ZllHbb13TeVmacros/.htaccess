@@ -25,7 +25,7 @@ ShibRequireSession On
 ShibRequireAll On
 ShibExportAssertion Off
 
-#Require valid-user
-#Require ADFS_GROUP "All CMS users" "cms-members"
 Require valid-user
-Require ADFS_GROUP "cms-higgs-vlephbb"
+Require ADFS_GROUP "All CMS users" "cms-members"
+#Require valid-user
+#Require ADFS_GROUP "cms-higgs-vlephbb"
