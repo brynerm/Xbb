@@ -32,38 +32,34 @@ parser.add_argument('--nh', dest='ht', action='store_const',
 
 #Move all plots in corresponding subfolders
 
-def MakeSubFolders(_input, current_):
+def MakeSubFolders(plotfolder, current):
 
     #I am in Plots
     
     # name of new folder
-    if args.name is None:
-        _plotfolder = _input.split('/')[-2]
-    else:
-        _plotfolder = args.name.split('/')[-1]
     
-    if not os.path.isdir(_plotfolder):
-        os.makedirs(_plotfolder)
+    if not os.path.isdir(plotfolder):
+        os.makedirs(plotfolder)
 
     #copy config
-    print 'command is','cp -r ../config ' + _plotfolder + '/'
-    subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
+    print 'command is','cp -r ../config ' + plotfolder + '/'
+    subprocess.call('cp -r ../config ' + plotfolder + '/', shell = True)
     
     #copy .htaccess
     if args.ht:
-        if not os.path.isfile(current_+'/.htaccess'):
-            print current_+'/.htaccess'
+        if not os.path.isfile(current+'/.htaccess'):
+            print current+'/.htaccess'
             raise Exception("HTaccessFileNotFound")
-        print 'command is','cp -r '+current_+'/.htaccess ' + _plotfolder + '/'
-        subprocess.call('cp -r '+current_+'/.htaccess ' + _plotfolder + '/', shell = True)
-        subprocess.call('cp -r ' + current_ + '/.htaccess ' + _plotfolder + '/config/', shell = True)
+        print 'command is','cp -r '+current+'/.htaccess ' + plotfolder + '/'
+        subprocess.call('cp -r '+current+'/.htaccess ' + plotfolder + '/', shell = True)
+        subprocess.call('cp -r ' + current + '/.htaccess ' + plotfolder + '/config/', shell = True)
 
     #copy index.php
-    if not os.path.isfile(current_+'/index.php'):
-        print current_+'/index.php'
+    if not os.path.isfile(current+'/index.php'):
+        print current+'/index.php'
         raise Exception("IndexFileNotFound")
-    subprocess.call('cp -r '+current_+'/index.php ' + _plotfolder + '/', shell = True)
-    subprocess.call('cp -r ' + current_ + '/index.php ' + _plotfolder + '/config/', shell = True)
+    subprocess.call('cp -r '+current+'/index.php ' + plotfolder + '/', shell = True)
+    subprocess.call('cp -r ' + current + '/index.php ' + plotfolder + '/config/', shell = True)
 
     #Files, file extension
     FILE = os.listdir('.')
@@ -94,9 +90,9 @@ def MakeSubFolders(_input, current_):
             folder = filename.split("__")[1]
    
         if folder is None:
-            folder2 = _plotfolder
+            folder2 = plotfolder
         else:
-            folder2 = os.path.join(_plotfolder,folder)
+            folder2 = os.path.join(plotfolder,folder)
 
         print file + ' --> ' + folder2
         if folder2:
@@ -106,10 +102,10 @@ def MakeSubFolders(_input, current_):
                 os.mkdir(folder2)
                 #subprocess.call('cp -r ../config '+ folder2 + '/', shell = True)
                 if args.ht:
-                    if not os.path.isfile(current_+'/.htaccess'):
+                    if not os.path.isfile(current+'/.htaccess'):
                         raise Exception("HTaccessFileNotFound")
-                    subprocess.call('cp -r '+current_+'/.htaccess ' + folder2 + '/', shell = True)
-                subprocess.call('cp -r '+current_+'/index.php ' + folder2 + '/', shell = True)
+                    subprocess.call('cp -r '+current+'/.htaccess ' + folder2 + '/', shell = True)
+                subprocess.call('cp -r '+current+'/index.php ' + folder2 + '/', shell = True)
 
             #copy file
             if os.path.isfile(file):
@@ -128,7 +124,7 @@ def MakeSubFolders(_input, current_):
                 pass
                 #print 'root/'+file.replace('png','C'), 'doesn\'t exist'
 
-def MoveSubFolders(_input, _output, server=None, user=None):
+def MoveSubFolders(plotfolder, output, server=None, user=None):
     if server is None:
         if user is None: 
             # try to use Tier3 username for LxPlus server
@@ -139,20 +135,16 @@ def MoveSubFolders(_input, _output, server=None, user=None):
     else:
         user = server.split('@')[0]
     
-    if args.name is None:
-        _plotfolder = _input.split('/')[-2]
-    else:
-        _plotfolder = args.name
     
     if args.webservice:
-        _output = '/' + args.webservice+ '/user/' + user[0] + "/" + user + "/www/" + _output
+        output = '/' + args.webservice+ '/user/' + user[0] + "/" + user + "/www/" + output
     
     if args.tar:
-        tarfile = _plotfolder + '.tar'
-        zipcommand = 'tar -cf ' + tarfile + ' ' + _plotfolder
+        tarfile = plotfolder + '.tar'
+        zipcommand = 'tar -cf ' + tarfile + ' ' + plotfolder
         print zipcommand
         subprocess.call(zipcommand, shell = True)
-        copyCommand = 'ssh '+ server +' "cd '+ _output + ' && tar -xvv" < ' + tarfile
+        copyCommand = 'ssh '+ server +' "cd '+ output + ' && tar -xvv" < ' + tarfile
         print copyCommand
         subprocess.call(copyCommand, shell = True)
         remTarCmd = 'rm ' + tarfile
@@ -161,30 +153,44 @@ def MoveSubFolders(_input, _output, server=None, user=None):
     
     else:
         print 'gonna lunch the command'
-        copyCommand = 'scp -r ' + _plotfolder + ' ' + server + ':' + _output
+        copyCommand = 'scp -r ' + plotfolder + ' ' + server + ':' + output
         print copyCommand
         subprocess.call(copyCommand, shell = True)
 
 
 args = parser.parse_args()
 
-#_input = os.path.abspath(args._input[0])
 _input = os.path.abspath(args.input)
+
+#prepare plotfolder name and output path
+_plotfolder = ""
 
 if args.name:
     _output = '/'.join(args.name.split('/')[0:-1])
+    _plotfolder = args.name.split('/')[-1]
+
 else:
     _output = "/"
 
+if _plotfolder == "":
+    _plotfolder = _input.split('/')[-2]
+
+
 print 'Input folder is', _input
 print 'Output folder is', _output
+print 'Plotfolder name is',_plotfolder
 
+#Makro location
 _current = '/'.join(os.path.realpath(__file__).split('/')[:-1])
+
+#change to plot location
 os.chdir(_input)
 
 if args.do_inp:
-    MakeSubFolders(_input,_current)
+    #prepare input folder
+    MakeSubFolders(_plotfolder, _current)
 
 if args.do_outp:
-    MoveSubFolders(_input, _output, server=args.server, user=args.user )
+    #copy to output path
+    MoveSubFolders(_plotfolder, _output, server=args.server, user=args.user )
 
