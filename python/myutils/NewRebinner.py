@@ -4,11 +4,12 @@ from scipy import optimize
 from scipy.interpolate import UnivariateSpline
 from matplotlib import pyplot as plt
 from scipy.misc import derivative
+import os
 
-#TODO verbosity, descriptions and comments, safe plots, chi2 test, default logscale edges
+#TODO verbosity, descriptions and comments, chi2 test, default logscale edges
 
 class Rebinner:
-    def __init__(self,mva_min,mva_max,mva_var=None,df_signal=None,df_background=None,make_plots=True):
+    def __init__(self,mva_min,mva_max,mva_var=None,df_signal=None,df_background=None,make_plots=True,plot_dir="binner_plots"):
 
         self.mva_min = mva_min
         self.mva_max = mva_max
@@ -17,6 +18,7 @@ class Rebinner:
         self.b_hist = None
         self.splines = []
         self.makePlots = make_plots
+        self.plot_dir = plot_dir
 
         if df_signal is not None and df_background is not None:
             self.prepare(df_signal,df_background)
@@ -85,12 +87,23 @@ class Rebinner:
         return np.clip(self.e_b_fit(x,*self.roc_parms),0,1)
 
     def fitRoc(self):
-        try:
-            plt.figure(0)
-            plt.plot(self.s_hist.eff,self.s_hist.x)
-        except:
-            print("WARNING: couldn't connect to display")
-            self.makePlots = False
+        if self.makePlots:
+            try:
+                plt.figure(0)
+                plt.clf()
+                plt.title("Signal efficiency")
+                plt.plot(self.s_hist.eff,self.s_hist.x)
+                plt.xlabel("signal efficiency")
+                plt.ylabel(self.mva)
+                plt.legend()
+                if not os.path.exists(self.plot_dir):
+                    os.makedirs(self.plot_dir)
+                plt.savefig("%s/%s"%(self.plot_dir,"seff_vs_mva.pdf"))
+
+            except:
+                print("WARNING: couldn't connect to display")
+                self.makePlots = False
+
         print("Control values: should be mva_min, mva_max, 1, 0")
         print self.getVal(1,self.s_hist.eff,self.s_hist.x)
         print self.getVal(0,self.s_hist.eff,self.s_hist.x)
@@ -98,7 +111,8 @@ class Rebinner:
         print self.getVal(self.mva_max,self.s_hist.x,self.s_hist.eff)
         e_b_raw = self.getVal(self.s_hist.x,self.b_hist.x,self.b_hist.eff)
         
-        fitrange = self.s_hist.eff > 0.01
+        fitlim =  max(0.01,self.s_limit/2)
+        fitrange = self.s_hist.eff > fitlim
         #guess paramters
         q=[0.73264402,0.19657415,0.95333252,0.25953929,3.08998159,0.09257951]
         
@@ -113,17 +127,21 @@ class Rebinner:
             print("Standard errors: %s"%str(err))
             print("Correlation Matrix")
             print cov/err[:,np.newaxis]/err[np.newaxis,:]
-            x = np.logspace(-3.5,0)
             if self.makePlots:
                 plt.figure(1)
-                plt.loglog(self.s_hist.eff[:-500],abs(e_b_raw[:-500]-self.e_b(self.s_hist.eff[:-500])))
+                plt.clf()
+                plt.loglog(self.s_hist.eff[fitrange],abs(e_b_raw[fitrange]-self.e_b(self.s_hist.eff[fitrange])),label='fit')
                 plt.figure(2)
-                plt.loglog(self.s_hist.eff[:-500],abs(e_b_raw[:-500]-self.e_b(self.s_hist.eff[:-500]))/e_b_raw[:-500])
+                plt.clf()
+                plt.loglog(self.s_hist.eff[fitrange],abs(e_b_raw[fitrange]-self.e_b(self.s_hist.eff[fitrange]))/e_b_raw[fitrange],label='fit')
                 plt.figure(3)
-                plt.plot(x,self.e_b(x))
+                plt.clf()
+                x = np.logspace(np.log(fitlim),0)
+                plt.plot(x,self.e_b(x),label='fit')
                 plt.figure(4)
+                plt.clf()
                 x = np.linspace(0,1)
-                plt.plot(x,self.e_b(x))
+                plt.plot(x,self.e_b(x),label='fit')
 
         except:
             print("ERROR: ROC curve fit did not converge. Try to set other starting values")
@@ -131,22 +149,44 @@ class Rebinner:
         
         if self.makePlots:
             plt.figure(1)
-            #plt.loglog(dfs["signal"].weight[:-100],abs(e_b_raw[:-100]-e_b_fit(dfs["signal"].weight[:-100],*q)),':')
+            plt.title("absolute difference")
+            plt.loglog(self.s_hist.eff[fitrange],abs(e_b_raw[fitrange]-self.e_b_fit(self.s_hist.eff[fitrange],*q)),':',label='guess parameters')
             plt.ylim([1e-6,0.1])
+            plt.xlabel("signal efficiency")
+            plt.ylabel("delta background efficiency")
+            plt.legend()
+            plt.savefig("%s/%s"%(self.plot_dir,"roc_fit_diff.pdf"))
+            
             plt.figure(2)
-            #plt.loglog(dfs["signal"].weight[:-100],abs(e_b_raw[:-100]-e_b_fit(dfs["signal"].weight[:-100],*q))/e_b_raw[:-100],':')
+            plt.title("relative difference")
+            plt.loglog(self.s_hist.eff[fitrange],abs(e_b_raw[fitrange]-self.e_b_fit(self.s_hist.eff[fitrange],*q))/e_b_raw[fitrange],':',label='guess parameters')
             plt.ylim([1e-4,10])
-            plt.figure(3)
-            plt.loglog(self.s_hist.eff,e_b_raw)
-            #plt.loglog(dfs["signal"].weight[:-100],e_b_fit(dfs["signal"].weight[:-100],*q),':')
-            plt.ylim([1e-5,1])
-            plt.xlim([1e-3,1])
-            plt.figure(4)
-            x = np.linspace(0,1)
-            plt.plot(self.s_hist.eff,e_b_raw)
-        #plt.plot(dfs["signal"].weight[:-100],e_b_fit(dfs["signal"].weight[:-100],*q),':')
-        #plt.show()
+            plt.xlabel("signal efficiency")
+            plt.ylabel("delta background efficiency")
+            plt.legend()
+            plt.savefig("%s/%s"%(self.plot_dir,"roc_fit_diffrel.pdf"))
 
+            plt.figure(3)
+            plt.title("ROC")
+            plt.loglog(self.s_hist.eff[fitrange],e_b_raw[fitrange],label='samples')
+            plt.loglog(self.s_hist.eff[fitrange],self.e_b_fit(self.s_hist.eff[fitrange],*q),':',label='guess parameters')
+            plt.ylim([1e-5,1])
+            plt.xlabel("signal efficiency")
+            plt.ylabel("background efficiency")
+            plt.legend()
+            plt.savefig("%s/%s"%(self.plot_dir,"roc_fit_log.pdf"))
+
+
+            plt.figure(4)
+            plt.title("ROC")
+            plt.plot(self.s_hist.eff[fitrange],e_b_raw[fitrange],label='samples')
+            plt.plot(self.s_hist.eff[fitrange],self.e_b_fit(self.s_hist.eff[fitrange],*q),':',label='guess parameters')
+            plt.xlabel("signal efficiency")
+            plt.ylabel("background efficiency")
+            plt.legend()
+            plt.savefig("%s/%s"%(self.plot_dir,"roc_fit.pdf"))
+
+            #plt.show()
         return converged
 
     def getBinCut(self, x, spline):
@@ -227,18 +267,31 @@ class Rebinner:
         cutlist.append(1.0)
         print "\nbin edges: " + str(cutlist)
         print "significance estimate: " + str(np.sqrt(sig2))
-        print "significance: " + str(self.EvalSign(cutlist))
+        print "significance: " + str(self.EvalSign(cutlist,plot=True))
         return cutlist
 
     
-    def EvalSign(self,cutList):
+    def EvalSign(self,cutList,plot=False):
         r = 0
+        r_i = []
         sig = self.total["signal"]*self.getVal(np.array(cutList),self.s_hist.x,self.s_hist.eff)
         bkg = self.total["background"]*self.getVal(np.array(cutList),self.b_hist.x,self.b_hist.eff)
         for i in range(1,len(cutList)):
             s = sig[i-1]-sig[i]
             b = bkg[i-1]-bkg[i]
-            r += self.sign1(s,b)
+            l = self.sign1(s,b)
+            r_i.append(l)
+            r += l
             #print [s,b,s**2/(s+b)]
         print "background in last bin: "+str(b)
+        if self.makePlots and plot:
+            plt.figure()
+            plt.step(cutList[1:],-np.diff(sig)/self.total["signal"],label='sig',where='pre')
+            plt.step(cutList[1:],-np.diff(bkg)/self.total["background"],label='bkg',where='pre')
+            plt.step(cutList[1:],np.array(r_i)/r,where='pre',label='significance contribution')
+            plt.legend()
+            plt.savefig("%s/%s"%(self.plot_dir,"rebin_shape.pdf"))
         return np.sqrt(r)
+    
+    def showPlots(self):
+        plt.show()

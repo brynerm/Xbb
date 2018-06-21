@@ -26,6 +26,8 @@ parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
 parser.add_option("-l","--load", dest="loadHDF", action="store_const", default=False, const=True,
                       help="load hdf files")
+parser.add_option("-p","--plot", dest="plot", action="store_const", default=False, const=True,
+                      help="plot fit curves")
 parser.add_option("--force", dest="force", action="store_const", default=False, const=True,
                       help="force reloading samples (use it when cuts have changed)")
 (opts, args) = parser.parse_args(argv)
@@ -63,7 +65,7 @@ for region,df_dict in dfs.iteritems():
     mva_min = dc.binning["minX"]
     mva_max = dc.binning["maxX"]
     n_bins = dc.binning["nBinsX"]    
-    binner = Rebinner(mva_min,mva_max)
+    binner = Rebinner(mva_min,mva_max,mva_var=dc.treevar,make_plots=opts.plot,plot_dir="binner_plots/%s_%s/"%(region,dc.treevar.split(".")[0]))
 
     try:
         if opts.loadHDF:
